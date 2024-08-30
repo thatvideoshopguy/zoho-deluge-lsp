@@ -2,12 +2,12 @@ package com.deluge.delugelsp.functions.text;
 
 import static com.deluge.delugelsp.utils.RangeUtils.getRangeForMatch;
 import static com.deluge.delugelsp.utils.ParserUtils.extractFunctionAtPosition;
+import static com.deluge.delugelsp.utils.MarkupContentUtils.getMarkupContentFromFile;
 
 import org.eclipse.lsp4j.CompletionItem;
 import org.eclipse.lsp4j.Diagnostic;
 import org.eclipse.lsp4j.Hover;
 import org.eclipse.lsp4j.Position;
-import org.eclipse.lsp4j.MarkupContent;
 import org.eclipse.lsp4j.CompletionItemKind;
 import org.eclipse.lsp4j.DiagnosticSeverity;
 
@@ -17,7 +17,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-
 public class ContainsFunction implements TextFunction {
 
     @Override
@@ -25,15 +24,7 @@ public class ContainsFunction implements TextFunction {
         String functionName = extractFunctionAtPosition(content, position);
         if ("contains".equals(functionName)) {
             Hover hover = new Hover();
-            hover.setContents(new MarkupContent("markdown",
-                    "**contains**\n\n" +
-                            "Returns `true` if the specified substring is present in the given string.\n\n" +
-                            "Usage:\n```deluge\n" +
-                            "<text1>.contains(<text2>);\n```\n" +
-                            "Example:\n```deluge\n" +
-                            "\"Zoho Creator\".contains(\"Zoho\"); // Returns: true\n" +
-                            "```\n" +
-                            "This function returns `true` if the main text includes the specified text. Otherwise, it will return `false`."));
+            hover.setContents(getMarkupContentFromFile("text/containsFunction.md"));
             return CompletableFuture.completedFuture(hover);
         }
         return CompletableFuture.completedFuture(null);

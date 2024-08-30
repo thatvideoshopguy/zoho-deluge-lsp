@@ -26,43 +26,68 @@ public class ContainsFunctionTest {
     }
 
     @Test
-    void testGetHoverInfo() throws Exception {
-        String content = "This string contains a test.";
-        Position position = new Position(0, 12); // "contains" starts at index 12
+    void testGetHoverInfo_AtDifferentPositions() throws Exception {
+        String content = "foo = searchString.contains(\"bar\")";
+        Position positionOnKeyword = new Position(0, 20); // "contains" starts at index 12
+        Position positionBeforeKeyword = new Position(0, 5); // Hover before "contains"
+        Position positionAfterKeyword = new Position(0, 35); // Hover after "contains"
 
-        CompletableFuture<Hover> hoverFuture = containsFunction.getHoverInfo(content, position);
+        CompletableFuture<Hover> hoverFuture = containsFunction.getHoverInfo(content, positionOnKeyword);
         Hover hover = hoverFuture.get();
 
-        assertNotNull(hover, "Hover information should not be null");
-        assertNotNull(hover.getContents(), "Hover contents should not be null");
+        assertNotNull(hover, "Hover information should not be null when on keyword");
         assertTrue(hover.getContents().getRight().getValue().contains("**contains**"),
-                "Hover should contain documentation about the 'contains' function.");
+                "Hover should contain documentation about the 'contains' function when on keyword.");
+
+        hoverFuture = containsFunction.getHoverInfo(content, positionBeforeKeyword);
+        hover = hoverFuture.get();
+
+        assertNotNull(hover, "Hover information should not be null before keyword");
+        assertFalse(hover.getContents().getRight().getValue().contains("**contains**"),
+                "Hover should not contain 'contains' documentation when before keyword.");
+
+        hoverFuture = containsFunction.getHoverInfo(content, positionAfterKeyword);
+        hover = hoverFuture.get();
+
+        assertNotNull(hover, "Hover information should not be null after keyword");
+        assertFalse(hover.getContents().getRight().getValue().contains("**contains**"),
+                "Hover should not contain 'contains' documentation when after keyword.");
     }
 
     @Test
-    void testGetCompletionItems() {
-        String context = "string.";
+    void testGetCompletionItems_VariedContexts() {
+        String partialContext = "strin";
+        String emptyContext = "";
 
-        List<CompletionItem> items = containsFunction.getCompletionItems(context);
+        List<CompletionItem> itemsPartial = containsFunction.getCompletionItems(partialContext);
+        List<CompletionItem> itemsEmpty = containsFunction.getCompletionItems(emptyContext);
 
-        assertNotNull(items);
-        assertFalse(items.isEmpty());
-        assertEquals("contains", items.get(0).getLabel());
+        assertNotNull(itemsPartial);
+        assertFalse(itemsPartial.isEmpty());
+        assertTrue(itemsPartial.stream().anyMatch(item -> "contains".equals(item.getLabel())));
+
+        assertNotNull(itemsEmpty);
+        assertTrue(itemsEmpty.isEmpty(), "Completion should be empty when context is empty");
     }
 
     @Test
-    void testGetDiagnostics() {
-        String contentWithCorrectUsage = "\"Hello World\".contains(\"Hello\");";
-        String contentWithIncorrectUsage = "\"Hello World\".contains(Hello);";
+    void testGetDiagnostics_EdgeCases() {
+        String contentWithUnclosedString = "\"Hello World.contains(\"Hello\");";
+        String contentWithNullArgument = "\"Hello World\".contains(null);";
+        String contentWithNestedFunctions = "\"Hello World\".contains(\"Hello\".substring(0, 2));";
 
-        List<Diagnostic> diagnosticsCorrect = containsFunction.getDiagnostics(contentWithCorrectUsage);
-        List<Diagnostic> diagnosticsIncorrect = containsFunction.getDiagnostics(contentWithIncorrectUsage);
+        List<Diagnostic> diagnosticsUnclosed = containsFunction.getDiagnostics(contentWithUnclosedString);
+        List<Diagnostic> diagnosticsNullArg = containsFunction.getDiagnostics(contentWithNullArgument);
+        List<Diagnostic> diagnosticsNested = containsFunction.getDiagnostics(contentWithNestedFunctions);
 
-        assertTrue(diagnosticsCorrect.isEmpty());
+        assertFalse(diagnosticsUnclosed.isEmpty(), "Should identify unclosed string");
+        assertEquals(DiagnosticSeverity.Error, diagnosticsUnclosed.get(0).getSeverity());
 
-        assertFalse(diagnosticsIncorrect.isEmpty());
-        assertEquals(DiagnosticSeverity.Error, diagnosticsIncorrect.get(0).getSeverity());
-        assertEquals("The argument to 'contains' must be a string.", diagnosticsIncorrect.get(0).getMessage());
+        assertFalse(diagnosticsNullArg.isEmpty(), "Should identify null argument as error");
+        assertEquals(DiagnosticSeverity.Error, diagnosticsNullArg.get(0).getSeverity());
+        assertEquals("The argument to 'contains' must be a non-null string.", diagnosticsNullArg.get(0).getMessage());
+
+        assertTrue(diagnosticsNested.isEmpty(), "Nested functions should be correctly diagnosed as valid");
     }
 
 }

@@ -3,6 +3,7 @@ package com.deluge.delugelsp.utils;
 import org.eclipse.lsp4j.Position;
 
 public class ParserUtils {
+
     /**
      * Extracts the function name at the given cursor position from the provided content.
      * This method is designed to recognize a function call like contains(...).
